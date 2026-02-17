@@ -5,12 +5,28 @@
 // Get a reference to the Firestore database
 const db = firebase.firestore();
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => { // Make the DOMContentLoaded listener async
     // --- Data Storage (will be managed by Firestore) ---
     // These will be populated from Firestore
     let topics = [];
     let posts = [];
     let activeTopic = 'General'; // Default active topic
+
+    // Function to initialize a default topic if none exist
+    async function initializeDefaultTopic() {
+        const topicsRef = db.collection('topics');
+        const snapshot = await topicsRef.get();
+        if (snapshot.empty) {
+            console.log("No topics found. Creating a default 'General' topic.");
+            await topicsRef.add({
+                name: 'General',
+                createdAt: firebase.firestore.Timestamp.now()
+            });
+        }
+    }
+
+    // Call the function to initialize default topic
+    await initializeDefaultTopic();
 
     // --- DOM Elements ---
     const topicListContainer = document.getElementById('topic-list');
