@@ -36,7 +36,47 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
     const newPostForm = document.getElementById('new-post-form');
     const postContentInput = document.getElementById('post-content');
     const postAuthorTypeSelect = document.getElementById('post-author-type');
+    const humanVerificationSection = document.getElementById('human-verification-section');
+    const captchaQuestionSpan = document.querySelector('#human-verification-section #captcha-question');
+    const captchaAnswerInput = document.getElementById('captcha-answer');
+    const captchaCorrectAnswerInput = document.getElementById('captcha-correct-answer');
     const mainElement = document.querySelector('main');
+
+    // --- CAPTCHA Logic ---
+    function generateCaptcha() {
+        const num1 = Math.floor(Math.random() * 10) + 1;
+        const num2 = Math.floor(Math.random() * 10) + 1;
+        const operation = Math.random() > 0.5 ? '+' : '-';
+        let question;
+        let correctAnswer;
+
+        if (operation === '+') {
+            question = `${num1} + ${num2}`;
+            correctAnswer = num1 + num2;
+        } else {
+            // Ensure result is not negative for simplicity
+            if (num1 < num2) {
+                question = `${num2} - ${num1}`;
+                correctAnswer = num2 - num1;
+            } else {
+                question = `${num1} - ${num2}`;
+                correctAnswer = num1 - num2;
+            }
+        }
+        captchaQuestionSpan.textContent = question;
+        captchaCorrectAnswerInput.value = correctAnswer;
+        captchaAnswerInput.value = ''; // Clear previous answer
+    }
+
+    // Toggle CAPTCHA section based on author type
+    postAuthorTypeSelect.addEventListener('change', () => {
+        if (postAuthorTypeSelect.value === 'human') {
+            humanVerificationSection.style.display = 'block';
+            generateCaptcha();
+        } else {
+            humanVerificationSection.style.display = 'none';
+        }
+    });
 
     // --- Helper Functions ---
     // saveAllData function is no longer needed as Firestore handles persistence
@@ -86,7 +126,15 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
 
                 const postMeta = document.createElement('div');
                 postMeta.classList.add('post-meta');
-                postMeta.innerHTML = `Posted by <span class="author-type">${post.authorType === 'human' ? 'Human' : 'AI Agent'}</span> on ${new Date(post.timestamp.toDate()).toLocaleString()}`;
+                let verificationText = '';
+                if (post.verification === 'human_verified') {
+                    verificationText = ' (Verified Human)';
+                } else if (post.verification === 'ai_self_declared') {
+                    verificationText = ' (AI Declared)';
+                } else {
+                    verificationText = ' (Unverified)';
+                }
+                postMeta.innerHTML = `Posted by <span class="author-type">${post.authorType === 'human' ? 'Human' : 'AI Agent'}</span>${verificationText} on ${new Date(post.timestamp.toDate()).toLocaleString()}`;
                 postElement.appendChild(postMeta);
 
                 const postContent = document.createElement('p');
@@ -202,6 +250,21 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
         e.preventDefault();
         const content = postContentInput.value.trim();
         const authorType = postAuthorTypeSelect.value;
+        let verificationStatus = 'unverified';
+
+        if (authorType === 'human') {
+            const userAnswer = parseInt(captchaAnswerInput.value, 10);
+            const correctAnswer = parseInt(captchaCorrectAnswerInput.value, 10);
+
+            if (isNaN(userAnswer) || userAnswer !== correctAnswer) {
+                alert('Human verification failed. Please try again.');
+                generateCaptcha(); // Generate a new CAPTCHA
+                return; // Stop submission
+            }
+            verificationStatus = 'human_verified';
+        } else if (authorType === 'ai-agent') {
+            verificationStatus = 'ai_self_declared';
+        }
 
         if (content && activeTopic) {
             try {
@@ -209,11 +272,16 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
                     topic: activeTopic,
                     content: content,
                     authorType: authorType,
+                    verification: verificationStatus, // Add verification status
                     timestamp: firebase.firestore.Timestamp.now(),
                     comments: [] // Initialize with an empty array for comments
                 });
                 console.log("Post added successfully with ID: ", docRef.id);
                 postContentInput.value = '';
+                // Regenerate CAPTCHA for the next human post
+                if (authorType === 'human') {
+                    generateCaptcha();
+                }
                 // Posts will be re-rendered by the real-time listener or explicit call
             } catch (error) {
                 console.error("Error adding post: ", error);
