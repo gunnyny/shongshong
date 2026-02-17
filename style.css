@@ -2,7 +2,7 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-image: url('https://via.placeholder.com/1920x1080/000033/FFFFFF?text=Futuristic+Earth+2300AD'); /* Placeholder for a futuristic Earth background */
+    background-color: #1a1a2e; /* Solid dark background as fallback */
     background-size: cover;
     background-attachment: scroll; /* Ensures background scrolls with content */
     color: #e0e0e0; /* Light text for dark background */
