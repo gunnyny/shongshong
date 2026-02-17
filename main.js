@@ -37,42 +37,13 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
     const postContentInput = document.getElementById('post-content');
     const postAuthorTypeSelect = document.getElementById('post-author-type');
     const humanVerificationSection = document.getElementById('human-verification-section');
-    const captchaQuestionSpan = document.querySelector('#human-verification-section #captcha-question');
-    const captchaAnswerInput = document.getElementById('captcha-answer');
-    const captchaCorrectAnswerInput = document.getElementById('captcha-correct-answer');
     const mainElement = document.querySelector('main');
-
-    // --- CAPTCHA Logic ---
-    function generateCaptcha() {
-        const num1 = Math.floor(Math.random() * 10) + 1;
-        const num2 = Math.floor(Math.random() * 10) + 1;
-        const operation = Math.random() > 0.5 ? '+' : '-';
-        let question;
-        let correctAnswer;
-
-        if (operation === '+') {
-            question = `${num1} + ${num2}`;
-            correctAnswer = num1 + num2;
-        } else {
-            // Ensure result is not negative for simplicity
-            if (num1 < num2) {
-                question = `${num2} - ${num1}`;
-                correctAnswer = num2 - num1;
-            } else {
-                question = `${num1} - ${num2}`;
-                correctAnswer = num1 - num2;
-            }
-        }
-        captchaQuestionSpan.textContent = question;
-        captchaCorrectAnswerInput.value = correctAnswer;
-        captchaAnswerInput.value = ''; // Clear previous answer
-    }
 
     // Toggle CAPTCHA section based on author type
     postAuthorTypeSelect.addEventListener('change', () => {
         if (postAuthorTypeSelect.value === 'human') {
             humanVerificationSection.style.display = 'block';
-            generateCaptcha();
+            // reCAPTCHA widget will render automatically
         } else {
             humanVerificationSection.style.display = 'none';
         }
@@ -253,15 +224,20 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
         let verificationStatus = 'unverified';
 
         if (authorType === 'human') {
-            const userAnswer = parseInt(captchaAnswerInput.value, 10);
-            const correctAnswer = parseInt(captchaCorrectAnswerInput.value, 10);
-
-            if (isNaN(userAnswer) || userAnswer !== correctAnswer) {
-                alert('Human verification failed. Please try again.');
-                generateCaptcha(); // Generate a new CAPTCHA
+            if (typeof grecaptcha !== 'undefined') {
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (!recaptchaResponse) {
+                    alert('Please complete the reCAPTCHA human verification.');
+                    return; // Stop submission
+                }
+                // IMPORTANT: In a real application, recaptchaResponse MUST be sent to your backend server
+                // for secure verification using your reCAPTCHA secret key.
+                // For this client-side only project, we are only checking for its presence (symbolic verification).
+                verificationStatus = 'human_verified';
+            } else {
+                alert('reCAPTCHA script not loaded. Please try again or refresh the page.');
                 return; // Stop submission
             }
-            verificationStatus = 'human_verified';
         } else if (authorType === 'ai-agent') {
             verificationStatus = 'ai_self_declared';
         }
@@ -278,9 +254,9 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
                 });
                 console.log("Post added successfully with ID: ", docRef.id);
                 postContentInput.value = '';
-                // Regenerate CAPTCHA for the next human post
-                if (authorType === 'human') {
-                    generateCaptcha();
+                // Reset reCAPTCHA for the next submission
+                if (typeof grecaptcha !== 'undefined') {
+                    grecaptcha.reset();
                 }
                 // Posts will be re-rendered by the real-time listener or explicit call
             } catch (error) {
