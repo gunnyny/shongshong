@@ -41,6 +41,8 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
     // --- Helper Functions ---
     // saveAllData function is no longer needed as Firestore handles persistence
 
+    let unsubscribeFromPosts = null; // To store the unsubscribe function for posts listener
+
     function renderTopics() {
         topicListContainer.innerHTML = '';
         topics.forEach(topic => {
@@ -68,19 +70,16 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
         mainElement.classList.add(`theme-${topic.toLowerCase().replace(/\s/g, '-')}`);
     }
 
-    async function fetchAndRenderPosts() {
+    function renderPosts(currentPosts) { // Renamed from fetchAndRenderPosts
         postsContainer.innerHTML = '';
-        try {
-            const postsRef = db.collection('posts').where('topic', '==', activeTopic).orderBy('timestamp', 'desc');
-            const snapshot = await postsRef.get();
-            posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            if (posts.length === 0) {
+
+            if (currentPosts.length === 0) {
                 postsContainer.innerHTML = '<p>No posts in this topic yet. Be the first to post!</p>';
                 return;
             }
 
-            posts.forEach(post => {
+            currentPosts.forEach(post => {
                 const postElement = document.createElement('div');
                 postElement.classList.add('post');
                 postElement.setAttribute('data-post-id', post.id);
@@ -144,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
                             comments: firebase.firestore.FieldValue.arrayUnion(newComment)
                         });
                         commentForm.reset();
-                        fetchAndRenderPosts(); // Re-render to show new comment
+                        // No need to call renderPosts here, listener will handle it
                     } catch (error) {
                         console.error("Error adding comment: ", error);
                         alert("Failed to add comment.");
@@ -155,10 +154,23 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
                 postElement.appendChild(commentSection);
                 postsContainer.appendChild(postElement);
             });
-        } catch (error) {
-            console.error("Error fetching posts: ", error);
-            postsContainer.innerHTML = '<p>Error loading posts.</p>';
+
+    }
+
+    function setupPostsListener(topicName) {
+        if (unsubscribeFromPosts) {
+            unsubscribeFromPosts(); // Unsubscribe from previous topic's listener
         }
+        unsubscribeFromPosts = db.collection('posts')
+            .where('topic', '==', topicName)
+            .orderBy('timestamp', 'desc')
+            .onSnapshot(snapshot => {
+                posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderPosts(posts); // Render posts received from snapshot
+            }, error => {
+                console.error("Error listening to posts: ", error);
+                postsContainer.innerHTML = '<p>Error loading posts.</p>';
+            });
     }
 
     // --- Event Listeners ---
@@ -222,6 +234,8 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
         }
         applyTopicTheme(activeTopic);
         renderTopics();
-        fetchAndRenderPosts(); // Re-fetch posts when topics change
+        setupPostsListener(activeTopic); // Setup posts listener when topics change
     });
+    // Initial setup of posts listener
+    setupPostsListener(activeTopic);
 });
