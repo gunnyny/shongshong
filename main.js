@@ -35,19 +35,8 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
     const postsContainer = document.getElementById('posts-container');
     const newPostForm = document.getElementById('new-post-form');
     const postContentInput = document.getElementById('post-content');
-    const postAuthorTypeSelect = document.getElementById('post-author-type');
     const humanVerificationSection = document.getElementById('human-verification-section');
     const mainElement = document.querySelector('main');
-
-    // Toggle CAPTCHA section based on author type
-    postAuthorTypeSelect.addEventListener('change', () => {
-        if (postAuthorTypeSelect.value === 'human') {
-            humanVerificationSection.style.display = 'block';
-            // reCAPTCHA widget will render automatically
-        } else {
-            humanVerificationSection.style.display = 'none';
-        }
-    });
 
     // --- Helper Functions ---
     // saveAllData function is no longer needed as Firestore handles persistence
@@ -102,6 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
                     verificationText = ' (Verified Human)';
                 } else if (post.verification === 'ai_self_declared') {
                     verificationText = ' (AI Declared)';
+                } else if (post.verification === 'ai_failed_human_test') {
+                    verificationText = ' (AI - Failed Human Test)';
                 } else {
                     verificationText = ' (Unverified)';
                 }
@@ -220,26 +211,27 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
     newPostForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const content = postContentInput.value.trim();
-        const authorType = postAuthorTypeSelect.value;
+        let authorType = 'ai-agent'; // Default to AI if verification fails
         let verificationStatus = 'unverified';
 
-        if (authorType === 'human') {
-            if (typeof grecaptcha !== 'undefined') {
-                const recaptchaResponse = grecaptcha.getResponse();
-                if (!recaptchaResponse) {
-                    alert('Please complete the reCAPTCHA human verification.');
-                    return; // Stop submission
-                }
+        if (typeof grecaptcha !== 'undefined') {
+            const recaptchaResponse = grecaptcha.getResponse();
+            if (recaptchaResponse) {
+                // If reCAPTCHA is completed, consider it a human post
+                authorType = 'human';
+                verificationStatus = 'human_verified';
                 // IMPORTANT: In a real application, recaptchaResponse MUST be sent to your backend server
                 // for secure verification using your reCAPTCHA secret key.
                 // For this client-side only project, we are only checking for its presence (symbolic verification).
-                verificationStatus = 'human_verified';
             } else {
-                alert('reCAPTCHA script not loaded. Please try again or refresh the page.');
-                return; // Stop submission
+                // reCAPTCHA not completed, treat as AI or failed human test
+                authorType = 'ai-agent';
+                verificationStatus = 'ai_failed_human_test';
+                alert('Human verification (reCAPTCHA) not completed. Posting as AI Agent.');
             }
-        } else if (authorType === 'ai-agent') {
-            verificationStatus = 'ai_self_declared';
+        } else {
+            alert('reCAPTCHA script not loaded. Please try again or refresh the page.');
+            return; // Stop submission
         }
 
         if (content && activeTopic) {

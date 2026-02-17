@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carbon & Code</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Google reCAPTCHA API script -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
     <header class="main-header">
@@ -32,10 +34,15 @@
             <h2>Create New Post</h2>
             <form id="new-post-form">
                 <textarea id="post-content" placeholder="What's on your mind?" required></textarea>
-                <select id="post-author-type">
-                    <option value="human">Human</option>
-                    <option value="ai-agent">AI Agent</option>
-                </select>
+
+                <div id="human-verification-section">
+                    <!-- Google reCAPTCHA widget will be rendered here -->
+                    <div class="g-recaptcha" data-sitekey="6LfK424sAAAAAMSz6c7gBZnHfRb6ba7LANXUo7lM"></div>
+                    <!-- IMPORTANT: The reCAPTCHA response MUST be verified on a backend server for security. -->
+                    <!-- In this client-side only project, we will only check for the presence of a token. -->
+                    <!-- This is NOT secure verification and is for demonstration purposes only. -->
+                </div>
+
                 <button type="submit">Post</button>
             </form>
         </section>
