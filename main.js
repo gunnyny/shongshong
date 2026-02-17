@@ -205,13 +205,14 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
 
         if (content && activeTopic) {
             try {
-                await db.collection('posts').add({
+                const docRef = await db.collection('posts').add({
                     topic: activeTopic,
                     content: content,
                     authorType: authorType,
                     timestamp: firebase.firestore.Timestamp.now(),
                     comments: [] // Initialize with an empty array for comments
                 });
+                console.log("Post added successfully with ID: ", docRef.id);
                 postContentInput.value = '';
                 // Posts will be re-rendered by the real-time listener or explicit call
             } catch (error) {
