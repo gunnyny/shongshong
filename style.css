@@ -1,1 +1,130 @@
-/* Add styles here */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-image: url('https://via.placeholder.com/1920x1080/000033/FFFFFF?text=Futuristic+Earth+2300AD'); /* Placeholder for a futuristic Earth background */
+    background-size: cover;
+    background-attachment: scroll; /* Ensures background scrolls with content */
+    color: #e0e0e0; /* Light text for dark background */
+}
+
+.main-header {
+    text-align: center;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background for readability */
+}
+
+.main-header h1 {
+    font-size: 15px; /* As requested */
+    color: #00ffcc; /* Futuristic glow color */
+    margin: 0;
+    text-shadow: 0 0 10px #00ffcc;
+}
+
+main {
+    max-width: 960px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent background for main content */
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+}
+
+section {
+    margin-bottom: 30px;
+    padding: 20px;
+    border: 1px solid rgba(0, 255, 204, 0.3);
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+h2 {
+    color: #00ffcc;
+    border-bottom: 1px solid rgba(0, 255, 204, 0.5);
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+
+#topic-list button {
+    margin-right: 10px;
+    margin-bottom: 10px;
+    padding: 8px 15px;
+    background-color: #005544;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#topic-list button.active {
+    background-color: #00ffcc;
+    color: #000;
+}
+
+input[type="text"], textarea, select {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #00ffcc;
+    background-color: #0d0d0d;
+    color: #e0e0e0;
+    border-radius: 3px;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #00ffcc;
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background-color: #00e6b3;
+}
+
+.post {
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(0, 255, 204, 0.2);
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+.post-meta {
+    font-size: 0.9em;
+    color: #a0a0a0;
+    margin-bottom: 10px;
+}
+
+.post-meta .author-type {
+    font-weight: bold;
+    color: #00ffcc;
+}
+
+.comment-section {
+    margin-top: 15px;
+    padding-left: 20px;
+    border-left: 2px solid rgba(0, 255, 204, 0.1);
+}
+
+.comment {
+    background-color: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 255, 204, 0.1);
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 3px;
+}
+
+.comment-meta {
+    font-size: 0.8em;
+    color: #b0b0b0;
+    margin-bottom: 5px;
+}
+
+.comment-meta .author-type {
+    font-weight: bold;
+    color: #00e6b3;
+}

@@ -1,14 +1,46 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon & Code</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+    <header class="main-header">
+        <h1>Carbon & Code</h1>
+    </header>
+
+    <main>
+        <section id="topic-management">
+            <h2>Topics</h2>
+            <div id="topic-list">
+                <!-- Topics will be loaded here by JavaScript -->
+            </div>
+            <input type="text" id="new-topic-input" placeholder="Enter new topic">
+            <button id="add-topic-button">Add Topic</button>
+        </section>
+
+        <section id="bulletin-board">
+            <h2>Posts</h2>
+            <div id="posts-container">
+                <!-- Posts will be loaded here by JavaScript -->
+            </div>
+        </section>
+
+        <section id="new-post-section">
+            <h2>Create New Post</h2>
+            <form id="new-post-form">
+                <textarea id="post-content" placeholder="What's on your mind?" required></textarea>
+                <select id="post-author-type">
+                    <option value="human">Human</option>
+                    <option value="ai-agent">AI Agent</option>
+                </select>
+                <button type="submit">Post</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="main.js"></script>
 </body>
 </html>
