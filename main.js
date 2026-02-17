@@ -1,11 +1,16 @@
 // main.js
 
+// TODO: Ensure you have updated your Firebase configuration in index.html
+
+// Get a reference to the Firestore database
+const db = firebase.firestore();
+
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Data Storage (using localStorage for simple persistence) ---
-    let topics = JSON.parse(localStorage.getItem('topics')) || ['General', 'AI Ethics', 'Future Tech'];
-    let posts = JSON.parse(localStorage.getItem('posts')) || [];
-    let nextPostId = JSON.parse(localStorage.getItem('nextPostId')) || 1;
-    let activeTopic = localStorage.getItem('activeTopic') || 'General';
+    // --- Data Storage (will be managed by Firestore) ---
+    // These will be populated from Firestore
+    let topics = [];
+    let posts = [];
+    let activeTopic = 'General'; // Default active topic
 
     // --- DOM Elements ---
     const topicListContainer = document.getElementById('topic-list');
@@ -18,28 +23,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainElement = document.querySelector('main');
 
     // --- Helper Functions ---
-    function saveAllData() {
-        localStorage.setItem('topics', JSON.stringify(topics));
-        localStorage.setItem('posts', JSON.stringify(posts));
-        localStorage.setItem('nextPostId', JSON.stringify(nextPostId));
-        localStorage.setItem('activeTopic', activeTopic);
-    }
+    // saveAllData function is no longer needed as Firestore handles persistence
 
     function renderTopics() {
         topicListContainer.innerHTML = '';
         topics.forEach(topic => {
             const button = document.createElement('button');
-            button.textContent = topic;
+            button.textContent = topic.name; // Assuming topic objects have a 'name' field
             button.classList.add('topic-button');
-            if (topic === activeTopic) {
+            if (topic.name === activeTopic) {
                 button.classList.add('active');
             }
             button.addEventListener('click', () => {
-                activeTopic = topic;
-                applyTopicTheme(topic);
+                activeTopic = topic.name;
+                applyTopicTheme(topic.name);
                 renderTopics();
-                renderPosts();
-                saveAllData();
+                // When topic changes, we need to fetch and render posts for that topic
+                fetchAndRenderPosts();
             });
             topicListContainer.appendChild(button);
         });
@@ -52,125 +52,160 @@ document.addEventListener('DOMContentLoaded', () => {
         mainElement.classList.add(`theme-${topic.toLowerCase().replace(/\s/g, '-')}`);
     }
 
-    function renderPosts() {
+    async function fetchAndRenderPosts() {
         postsContainer.innerHTML = '';
-        const filteredPosts = posts.filter(post => post.topic === activeTopic);
+        try {
+            const postsRef = db.collection('posts').where('topic', '==', activeTopic).orderBy('timestamp', 'desc');
+            const snapshot = await postsRef.get();
+            posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        if (filteredPosts.length === 0) {
-            postsContainer.innerHTML = '<p>No posts in this topic yet. Be the first to post!</p>';
-            return;
-        }
-
-        filteredPosts.forEach(post => {
-            const postElement = document.createElement('div');
-            postElement.classList.add('post');
-            postElement.setAttribute('data-post-id', post.id);
-
-            const postMeta = document.createElement('div');
-            postMeta.classList.add('post-meta');
-            postMeta.innerHTML = `Posted by <span class="author-type">${post.authorType === 'human' ? 'Human' : 'AI Agent'}</span> on ${new Date(post.timestamp).toLocaleString()}`;
-            postElement.appendChild(postMeta);
-
-            const postContent = document.createElement('p');
-            postContent.textContent = post.content;
-            postElement.appendChild(postContent);
-
-            // Comments section
-            const commentSection = document.createElement('div');
-            commentSection.classList.add('comment-section');
-            const commentHeader = document.createElement('h4');
-            commentHeader.textContent = 'Comments';
-            commentSection.appendChild(commentHeader);
-
-            if (post.comments && post.comments.length > 0) {
-                post.comments.forEach(comment => {
-                    const commentElement = document.createElement('div');
-                    commentElement.classList.add('comment');
-                    commentElement.innerHTML = `<div class="comment-meta">Comment by <span class="author-type">${comment.authorType === 'human' ? 'Human' : 'AI Agent'}</span> on ${new Date(comment.timestamp).toLocaleString()}</div><p>${comment.content}</p>`;
-                    commentSection.appendChild(commentElement);
-                });
-            } else {
-                const noComments = document.createElement('p');
-                noComments.textContent = 'No comments yet.';
-                commentSection.appendChild(noComments);
+            if (posts.length === 0) {
+                postsContainer.innerHTML = '<p>No posts in this topic yet. Be the first to post!</p>';
+                return;
             }
 
-            // Comment form
-            const commentForm = document.createElement('form');
-            commentForm.classList.add('comment-form');
-            commentForm.innerHTML = `
-                <textarea class="comment-content" placeholder="Add a comment..." required></textarea>
-                <select class="comment-author-type">
-                    <option value="human">Human</option>
-                    <option value="ai-agent">AI Agent</option>
-                </select>
-                <button type="submit">Comment</button>
-            `;
-            commentForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const commentContent = commentForm.querySelector('.comment-content').value;
-                const commentAuthorType = commentForm.querySelector('.comment-author-type').value;
+            posts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.classList.add('post');
+                postElement.setAttribute('data-post-id', post.id);
 
-                const newComment = {
-                    id: Date.now(), // Simple unique ID
-                    content: commentContent,
-                    authorType: commentAuthorType,
-                    timestamp: new Date().toISOString()
-                };
+                const postMeta = document.createElement('div');
+                postMeta.classList.add('post-meta');
+                postMeta.innerHTML = `Posted by <span class="author-type">${post.authorType === 'human' ? 'Human' : 'AI Agent'}</span> on ${new Date(post.timestamp.toDate()).toLocaleString()}`;
+                postElement.appendChild(postMeta);
 
-                const postIndex = posts.findIndex(p => p.id === post.id);
-                if (postIndex > -1) {
-                    if (!posts[postIndex].comments) {
-                        posts[postIndex].comments = [];
-                    }
-                    posts[postIndex].comments.push(newComment);
-                    saveAllData();
-                    renderPosts(); // Re-render to show new comment
+                const postContent = document.createElement('p');
+                postContent.textContent = post.content;
+                postElement.appendChild(postContent);
+
+                // Comments section
+                const commentSection = document.createElement('div');
+                commentSection.classList.add('comment-section');
+                const commentHeader = document.createElement('h4');
+                commentHeader.textContent = 'Comments';
+                commentSection.appendChild(commentHeader);
+
+                if (post.comments && post.comments.length > 0) {
+                    post.comments.forEach(comment => {
+                        const commentElement = document.createElement('div');
+                        commentElement.classList.add('comment');
+                        commentElement.innerHTML = `<div class="comment-meta">Comment by <span class="author-type">${comment.authorType === 'human' ? 'Human' : 'AI Agent'}</span> on ${new Date(comment.timestamp.toDate()).toLocaleString()}</div><p>${comment.content}</p>`;
+                        commentSection.appendChild(commentElement);
+                    });
+                } else {
+                    const noComments = document.createElement('p');
+                    noComments.textContent = 'No comments yet.';
+                    commentSection.appendChild(noComments);
                 }
-            });
-            commentSection.appendChild(commentForm);
 
-            postElement.appendChild(commentSection);
-            postsContainer.appendChild(postElement);
-        });
+                // Comment form
+                const commentForm = document.createElement('form');
+                commentForm.classList.add('comment-form');
+                commentForm.innerHTML = `
+                    <textarea class="comment-content" placeholder="Add a comment..." required></textarea>
+                    <select class="comment-author-type">
+                        <option value="human">Human</option>
+                        <option value="ai-agent">AI Agent</option>
+                    </select>
+                    <button type="submit">Comment</button>
+                `;
+                commentForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const commentContent = commentForm.querySelector('.comment-content').value;
+                    const commentAuthorType = commentForm.querySelector('.comment-author-type').value;
+
+                    if (commentContent.trim() === '') return;
+
+                    const newComment = {
+                        content: commentContent,
+                        authorType: commentAuthorType,
+                        timestamp: firebase.firestore.Timestamp.now()
+                    };
+
+                    try {
+                        // Add comment to the post's comments array in Firestore
+                        await db.collection('posts').doc(post.id).update({
+                            comments: firebase.firestore.FieldValue.arrayUnion(newComment)
+                        });
+                        commentForm.reset();
+                        fetchAndRenderPosts(); // Re-render to show new comment
+                    } catch (error) {
+                        console.error("Error adding comment: ", error);
+                        alert("Failed to add comment.");
+                    }
+                });
+                commentSection.appendChild(commentForm);
+
+                postElement.appendChild(commentSection);
+                postsContainer.appendChild(postElement);
+            });
+        } catch (error) {
+            console.error("Error fetching posts: ", error);
+            postsContainer.innerHTML = '<p>Error loading posts.</p>';
+        }
     }
 
     // --- Event Listeners ---
-    addTopicButton.addEventListener('click', () => {
+    addTopicButton.addEventListener('click', async () => {
         const newTopicName = newTopicInput.value.trim();
-        if (newTopicName && !topics.includes(newTopicName)) {
-            topics.push(newTopicName);
-            newTopicInput.value = '';
-            renderTopics();
-            saveAllData();
-        } else if (topics.includes(newTopicName)) {
-            alert('This topic already exists!');
+        if (newTopicName) {
+            try {
+                // Check if topic already exists
+                const existingTopic = await db.collection('topics').where('name', '==', newTopicName).get();
+                if (!existingTopic.empty) {
+                    alert('This topic already exists!');
+                    return;
+                }
+
+                await db.collection('topics').add({
+                    name: newTopicName,
+                    createdAt: firebase.firestore.Timestamp.now()
+                });
+                newTopicInput.value = '';
+                // Topics will be re-rendered by the real-time listener
+            } catch (error) {
+                console.error("Error adding topic: ", error);
+                alert("Failed to add topic.");
+            }
         }
     });
 
-    newPostForm.addEventListener('submit', (e) => {
+    newPostForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const content = postContentInput.value.trim();
         const authorType = postAuthorTypeSelect.value;
 
-        if (content) {
-            const newPost = {
-                id: nextPostId++,
-                topic: activeTopic,
-                content: content,
-                authorType: authorType,
-                timestamp: new Date().toISOString(),
-                comments: []
-            };
-            posts.unshift(newPost); // Add to the beginning
-            postContentInput.value = '';
-            renderPosts();
-            saveAllData();
+        if (content && activeTopic) {
+            try {
+                await db.collection('posts').add({
+                    topic: activeTopic,
+                    content: content,
+                    authorType: authorType,
+                    timestamp: firebase.firestore.Timestamp.now(),
+                    comments: [] // Initialize with an empty array for comments
+                });
+                postContentInput.value = '';
+                // Posts will be re-rendered by the real-time listener or explicit call
+            } catch (error) {
+                console.error("Error adding post: ", error);
+                alert("Failed to add post.");
+            }
+        } else {
+            alert('Please select a topic and enter post content.');
         }
     });
 
-    // --- Initial Render ---
-    applyTopicTheme(activeTopic);
-    renderTopics();
-    renderPosts();
+    // --- Real-time Listeners (for initial render and subsequent updates) ---
+    // Listen for topic changes
+    db.collection('topics').orderBy('createdAt').onSnapshot(snapshot => {
+        topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (topics.length > 0 && !topics.some(t => t.name === activeTopic)) {
+            activeTopic = topics[0].name; // Set first topic as active if current is gone
+        } else if (topics.length === 0) {
+            activeTopic = 'General'; // Reset if no topics
+        }
+        applyTopicTheme(activeTopic);
+        renderTopics();
+        fetchAndRenderPosts(); // Re-fetch posts when topics change
+    });
 });
