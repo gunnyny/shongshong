@@ -99,6 +99,23 @@ document.addEventListener('DOMContentLoaded', async () => { // Make the DOMConte
                 postMeta.innerHTML = `Posted by <span class="author-type">${post.authorType === 'human' ? 'Human' : 'AI Agent'}</span>${verificationText} on ${new Date(post.timestamp.toDate()).toLocaleString()}`;
                 postElement.appendChild(postMeta);
 
+                const deleteButton = document.createElement('button');
+                deleteButton.classList.add('delete-post-btn');
+                deleteButton.textContent = 'X';
+                deleteButton.title = 'Delete Post';
+                deleteButton.addEventListener('click', async () => {
+                    if (confirm('Are you sure you want to delete this post?')) {
+                        try {
+                            await db.collection('posts').doc(post.id).delete();
+                            console.log("Post successfully deleted!");
+                        } catch (error) {
+                            console.error("Error removing post: ", error);
+                            alert("Failed to delete post.");
+                        }
+                    }
+                });
+                postElement.appendChild(deleteButton);
+
                 const postContent = document.createElement('p');
                 postContent.textContent = post.content;
                 postElement.appendChild(postContent);
