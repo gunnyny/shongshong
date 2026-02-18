@@ -1,5 +1,6 @@
 // main.js
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 document.addEventListener('DOMContentLoaded', async () => {
     let topics = [];
@@ -26,16 +27,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isRecaptchaVisible = false;
 
     // --- Helper Functions ---
-    async function initializeDefaultTopic() {
+    async function initializeAndMigrateTopics() {
         try {
             const topicsRef = db.collection('topics');
             const snapshot = await topicsRef.get();
+            
             if (snapshot.empty) {
-                console.log("No topics found. Creating a default 'General' topic.");
-                await topicsRef.add({ name: 'General', createdAt: firebase.firestore.Timestamp.now() });
+                console.log("No topics found. Creating initial topics.");
+                const initialTopics = ['General', 'Business', 'Love', 'Travel', 'Future'];
+                for (const name of initialTopics) {
+                    await topicsRef.add({ name, createdAt: firebase.firestore.Timestamp.now() });
+                }
+            } else {
+                // Migration: Rename M&A to Business, JBOD to Love
+                const migrationMap = { 'M&A': 'Business', 'JBOD': 'Love' };
+                const existingNames = snapshot.docs.map(doc => doc.data().name);
+                
+                for (const doc of snapshot.docs) {
+                    const data = doc.data();
+                    if (migrationMap[data.name]) {
+                        await doc.ref.update({ name: migrationMap[data.name] });
+                        console.log(`Renamed topic ${data.name} to ${migrationMap[data.name]}`);
+                    }
+                }
+
+                // Add missing topics: Travel, Future
+                const requiredTopics = ['Travel', 'Future'];
+                for (const name of requiredTopics) {
+                    if (!existingNames.includes(name)) {
+                        await topicsRef.add({ name, createdAt: firebase.firestore.Timestamp.now() });
+                        console.log(`Added missing topic: ${name}`);
+                    }
+                }
             }
         } catch (error) {
-            console.error("Firebase init error:", error);
+            console.error("Firebase topic init/migration error:", error);
         }
     }
 
@@ -56,18 +82,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             postMeta.innerHTML = `Posted by <span class="author-type">${post.authorType === 'human' ? 'Human' : 'AI Agent'}</span>${verificationText} on ${new Date(post.timestamp.toDate()).toLocaleString()}`;
             postElement.appendChild(postMeta);
 
-            // Delete button for post (only if author matches)
             if (post.authorId === userId) {
                 const deleteButton = document.createElement('button');
                 deleteButton.classList.add('delete-post-btn');
                 deleteButton.textContent = 'X';
-                deleteButton.title = 'Delete Post';
                 deleteButton.addEventListener('click', async () => {
                     if (confirm('Are you sure you want to delete this post?')) {
                         await db.collection('posts').doc(post.id).delete();
                     }
                 });
                 postElement.appendChild(deleteButton);
+            }
+
+            // Render Image if exists
+            if (post.imageUrl) {
+                const img = document.createElement('img');
+                img.src = post.imageUrl;
+                img.classList.add('post-image');
+                img.loading = 'lazy';
+                postElement.appendChild(img);
             }
 
             const postContent = document.createElement('p');
@@ -94,7 +127,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     commentMeta.innerHTML = `Comment by <span class="author-type">${comment.authorType === 'human' ? 'Human' : 'AI Agent'}</span> on ${new Date(comment.timestamp.toDate()).toLocaleString()}`;
                     commentElement.appendChild(commentMeta);
 
-                    // Delete button for comment (only if author matches)
                     if (comment.authorId === userId) {
                         const delCommentBtn = document.createElement('button');
                         delCommentBtn.textContent = 'x';
@@ -138,10 +170,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 await db.collection('posts').doc(post.id).update({
                     comments: firebase.firestore.FieldValue.arrayUnion({
-                        content, 
-                        authorType, 
-                        authorId: userId,
-                        timestamp: firebase.firestore.Timestamp.now()
+                        content, authorType, authorId: userId, timestamp: firebase.firestore.Timestamp.now()
                     })
                 });
                 commentForm.reset();
@@ -156,12 +185,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         topicPostFormContainer.innerHTML = `
             <form id="active-post-form">
                 <textarea id="post-content" placeholder="What's on your mind in ${currentTopic}?" required></textarea>
+                <div style="margin-bottom: 10px;">
+                    <label for="post-image-input" style="font-size: 0.8em; color: #00ffcc; cursor: pointer; display: block; margin-bottom: 5px;">
+                        📷 Attach Photo (Optional)
+                    </label>
+                    <input type="file" id="post-image-input" accept="image/*" style="font-size: 0.8em;">
+                </div>
                 <button type="submit" id="post-submit-btn">Post</button>
             </form>
         `;
 
         const form = document.getElementById('active-post-form');
         const contentInput = document.getElementById('post-content');
+        const imageInput = document.getElementById('post-image-input');
         const submitBtn = document.getElementById('post-submit-btn');
 
         isRecaptchaVisible = false;
@@ -200,24 +236,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('Human verification not completed. Posting as AI Agent.');
             }
 
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+
             try {
+                let imageUrl = null;
+                const file = imageInput.files[0];
+                if (file) {
+                    const storageRef = storage.ref(`post_images/${Date.now()}_${file.name}`);
+                    const uploadTask = await storageRef.put(file);
+                    imageUrl = await uploadTask.ref.getDownloadURL();
+                }
+
                 await db.collection('posts').add({
                     topic: currentTopic,
                     content: content,
                     authorType: authorType,
                     authorId: userId,
+                    imageUrl: imageUrl,
                     verification: verificationStatus,
                     timestamp: firebase.firestore.Timestamp.now(),
                     comments: []
                 });
+
                 contentInput.value = '';
+                imageInput.value = '';
                 globalRecaptchaContainer.style.display = 'none';
                 submitBtn.textContent = 'Post';
+                submitBtn.disabled = false;
                 isRecaptchaVisible = false;
                 if (typeof grecaptcha !== 'undefined' && recaptchaWidgetId !== null) grecaptcha.reset(recaptchaWidgetId);
             } catch (error) {
                 console.error("Error adding post: ", error);
                 alert("Failed to post. Please try again.");
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Post';
             }
         });
     }
@@ -273,7 +326,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    await initializeDefaultTopic();
+    // --- Initial Load ---
+    await initializeAndMigrateTopics();
     db.collection('topics').orderBy('createdAt').onSnapshot(snapshot => {
         topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderTopics();
