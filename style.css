@@ -45,20 +45,38 @@ h2 {
     margin-top: 0;
 }
 
-#topic-list button {
-    margin-right: 10px;
-    margin-bottom: 10px;
-    padding: 8px 15px;
-    background-color: #005544;
-    color: #fff;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
+.topic-container {
+    margin-bottom: 15px;
+    border: 1px solid rgba(0, 255, 204, 0.2);
+    border-radius: 5px;
+    overflow: hidden; /* Ensures the border-radius is respected by children */
 }
 
-#topic-list button.active {
+.topic-header {
+    padding: 15px;
+    background-color: #005544;
+    color: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    user-select: none; /* Prevents text selection on click */
+}
+
+.topic-header:hover {
+    background-color: #007755;
+}
+
+.topic-header.active {
     background-color: #00ffcc;
     color: #000;
+}
+
+.posts-container {
+    padding: 0 15px 15px 15px;
+    display: none; /* Hidden by default */
+}
+
+.posts-container.visible {
+    display: block;
 }
 
 input[type="text"], textarea, select {

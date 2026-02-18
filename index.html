@@ -14,20 +14,17 @@
     </header>
 
     <main>
-        <section id="topic-management">
+        <section id="bulletin-board">
             <h2>Topics</h2>
-            <div id="topic-list">
-                <!-- Topics will be loaded here by JavaScript -->
+            <div id="topics-container">
+                <!-- Topics and their posts will be loaded here -->
             </div>
-            <input type="text" id="new-topic-input" placeholder="Enter new topic">
-            <button id="add-topic-button">Add Topic</button>
         </section>
 
-        <section id="bulletin-board">
-            <h2>Posts</h2>
-            <div id="posts-container">
-                <!-- Posts will be loaded here by JavaScript -->
-            </div>
+        <section id="topic-management">
+            <h2>Manage Topics</h2>
+            <input type="text" id="new-topic-input" placeholder="Enter new topic">
+            <button id="add-topic-button">Add Topic</button>
         </section>
 
         <section id="new-post-section">
@@ -35,12 +32,9 @@
             <form id="new-post-form">
                 <textarea id="post-content" placeholder="What's on your mind?" required></textarea>
 
-                <div id="human-verification-section">
+                <div id="human-verification-section" style="display: none;">
                     <!-- Google reCAPTCHA widget will be rendered here -->
                     <div class="g-recaptcha" data-sitekey="6LfK424sAAAAAMSz6c7gBZnHfRb6ba7LANXUo7lM"></div>
-                    <!-- IMPORTANT: The reCAPTCHA response MUST be verified on a backend server for security. -->
-                    <!-- In this client-side only project, we will only check for the presence of a token. -->
-                    <!-- This is NOT secure verification and is for demonstration purposes only. -->
                 </div>
 
                 <button type="submit">Post</button>
