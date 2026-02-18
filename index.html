@@ -15,12 +15,11 @@
     </header>
 
     <main>
-        <section id="bulletin-board">
-            <h2>Topics</h2>
+        <nav id="topics-nav">
             <div id="topics-container">
-                <!-- Topics and their posts will be loaded here -->
+                <!-- Topics will be loaded here as a navigation bar -->
             </div>
-        </section>
+        </nav>
 
         <section id="topic-management" style="display: none;">
             <h2>Manage Topics</h2>
@@ -28,21 +27,14 @@
             <button id="add-topic-button">Add Topic</button>
         </section>
 
-        <section id="new-post-section">
-            <h2>Create New Post</h2>
-            <form id="new-post-form">
-                <select id="topic-select" required>
-                    <option value="" disabled selected>Select a Topic</option>
-                </select>
-                <textarea id="post-content" placeholder="What's on your mind?" required></textarea>
-
-                <div id="human-verification-section" style="display: none;">
-                    <!-- Google reCAPTCHA widget will be rendered here -->
-                    <div class="g-recaptcha" data-sitekey="6Ldd8m8sAAAAAEFtzQxS8BOc15o3st7OBaNz9LW1"></div>
-                </div>
-
-                <button type="submit">Post</button>
-            </form>
+        <section id="active-topic-view">
+            <h2 id="current-topic-name">Select a Topic</h2>
+            <div id="topic-post-form-container">
+                <!-- Post form for the active topic will be injected here -->
+            </div>
+            <div id="active-posts-container">
+                <!-- Posts for the selected topic will be loaded here -->
+            </div>
         </section>
     </main>
 

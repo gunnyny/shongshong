@@ -10,83 +10,108 @@ body {
 
 .main-header {
     text-align: center;
-    padding: 20px;
-    background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background for readability */
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.8);
+    border-bottom: 1px solid rgba(0, 255, 204, 0.2);
 }
 
 .main-header h1 {
-    font-size: 15px; /* As requested */
-    color: #00ffcc; /* Futuristic glow color */
+    font-size: 18px;
+    color: #00ffcc;
     margin: 0;
     text-shadow: 0 0 10px #00ffcc;
 }
 
+.main-header p {
+    font-size: 12px;
+    margin: 5px 0 0 0;
+    color: #a0a0a0;
+}
+
+#topics-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: rgba(13, 13, 13, 0.95);
+    backdrop-filter: blur(5px);
+    padding: 10px;
+    border-bottom: 1px solid rgba(0, 255, 204, 0.3);
+    overflow-x: auto;
+}
+
+#topics-container {
+    display: flex;
+    gap: 10px;
+    max-width: 960px;
+    margin: 0 auto;
+    white-space: nowrap;
+}
+
+.topic-box {
+    padding: 8px 15px;
+    background-color: #004433;
+    border: 1px solid rgba(0, 255, 204, 0.3);
+    border-radius: 20px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.topic-box:hover {
+    background-color: #006644;
+    border-color: #00ffcc;
+}
+
+.topic-box.active {
+    background-color: #00ffcc;
+    color: #000;
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+}
+
 main {
     max-width: 960px;
-    margin: 20px auto;
-    padding: 20px;
-    background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent background for main content */
-    border-radius: 8px;
-    box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+    margin: 10px auto;
+    padding: 10px;
 }
 
 section {
-    margin-bottom: 30px;
-    padding: 20px;
-    border: 1px solid rgba(0, 255, 204, 0.3);
-    border-radius: 5px;
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid rgba(0, 255, 204, 0.2);
+    border-radius: 8px;
     background-color: rgba(0, 0, 0, 0.6);
 }
 
 h2 {
+    font-size: 1.2em;
     color: #00ffcc;
-    border-bottom: 1px solid rgba(0, 255, 204, 0.5);
-    padding-bottom: 10px;
     margin-top: 0;
-}
-
-.topic-container {
     margin-bottom: 15px;
-    border: 1px solid rgba(0, 255, 204, 0.2);
-    border-radius: 5px;
-    overflow: hidden; /* Ensures the border-radius is respected by children */
 }
 
-.topic-header {
+#active-topic-view h2 {
+    border-bottom: 1px solid rgba(0, 255, 204, 0.3);
+    padding-bottom: 10px;
+}
+
+#topic-post-form-container {
+    margin-bottom: 20px;
     padding: 15px;
-    background-color: #005544;
-    color: #fff;
-    cursor: pointer;
-    font-weight: bold;
-    user-select: none; /* Prevents text selection on click */
-}
-
-.topic-header:hover {
-    background-color: #007755;
-}
-
-.topic-header.active {
-    background-color: #00ffcc;
-    color: #000;
-}
-
-.posts-container {
-    padding: 0 15px 15px 15px;
-    display: none; /* Hidden by default */
-}
-
-.posts-container.visible {
-    display: block;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
 }
 
 input[type="text"], textarea, select {
     width: calc(100% - 22px);
     padding: 10px;
     margin-bottom: 10px;
-    border: 1px solid #00ffcc;
+    border: 1px solid rgba(0, 255, 204, 0.4);
     background-color: #0d0d0d;
     color: #e0e0e0;
-    border-radius: 3px;
+    border-radius: 5px;
+    font-family: inherit;
 }
 
 button {
@@ -94,9 +119,10 @@ button {
     background-color: #00ffcc;
     color: #000;
     border: none;
-    border-radius: 3px;
+    border-radius: 5px;
     cursor: pointer;
     font-weight: bold;
+    transition: background-color 0.2s;
 }
 
 button:hover {
@@ -105,14 +131,25 @@ button:hover {
 
 .post {
     background-color: rgba(0, 0, 0, 0.7);
-    border: 1px solid rgba(0, 255, 204, 0.2);
+    border: 1px solid rgba(0, 255, 204, 0.1);
     padding: 15px;
     margin-bottom: 15px;
-    border-radius: 5px;
+    border-radius: 8px;
+    position: relative;
+}
+
+.delete-post-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 2px 8px;
+    background-color: #ff4444;
+    color: white;
+    font-size: 10px;
 }
 
 .post-meta {
-    font-size: 0.9em;
+    font-size: 0.85em;
     color: #a0a0a0;
     margin-bottom: 10px;
 }
@@ -124,22 +161,22 @@ button:hover {
 
 .comment-section {
     margin-top: 15px;
-    padding-left: 20px;
-    border-left: 2px solid rgba(0, 255, 204, 0.1);
+    padding-left: 15px;
+    border-left: 2px solid rgba(0, 255, 204, 0.2);
 }
 
 .comment {
-    background-color: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(0, 255, 204, 0.1);
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 5px;
 }
 
 .comment-meta {
-    font-size: 0.8em;
+    font-size: 0.75em;
     color: #b0b0b0;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
 }
 
 .comment-meta .author-type {
