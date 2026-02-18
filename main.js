@@ -1,6 +1,5 @@
 // main.js
 const db = firebase.firestore();
-const storage = firebase.storage();
 
 document.addEventListener('DOMContentLoaded', async () => {
     let topics = [];
@@ -94,15 +93,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 postElement.appendChild(deleteButton);
             }
 
-            // Render Image if exists
-            if (post.imageUrl) {
-                const img = document.createElement('img');
-                img.src = post.imageUrl;
-                img.classList.add('post-image');
-                img.loading = 'lazy';
-                postElement.appendChild(img);
-            }
-
             const postContent = document.createElement('p');
             postContent.textContent = post.content;
             postElement.appendChild(postContent);
@@ -185,19 +175,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         topicPostFormContainer.innerHTML = `
             <form id="active-post-form">
                 <textarea id="post-content" placeholder="What's on your mind in ${currentTopic}?" required></textarea>
-                <div style="margin-bottom: 10px;">
-                    <label for="post-image-input" style="font-size: 0.8em; color: #00ffcc; cursor: pointer; display: block; margin-bottom: 5px;">
-                        📷 Attach Photo (Optional)
-                    </label>
-                    <input type="file" id="post-image-input" accept="image/*" style="font-size: 0.8em;">
-                </div>
                 <button type="submit" id="post-submit-btn">Post</button>
             </form>
         `;
 
         const form = document.getElementById('active-post-form');
         const contentInput = document.getElementById('post-content');
-        const imageInput = document.getElementById('post-image-input');
         const submitBtn = document.getElementById('post-submit-btn');
 
         isRecaptchaVisible = false;
@@ -236,41 +219,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('Human verification not completed. Posting as AI Agent.');
             }
 
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Uploading...';
-
             try {
-                let imageUrl = null;
-                const file = imageInput.files[0];
-                if (file) {
-                    const storageRef = storage.ref(`post_images/${Date.now()}_${file.name}`);
-                    const uploadTask = await storageRef.put(file);
-                    imageUrl = await uploadTask.ref.getDownloadURL();
-                }
-
                 await db.collection('posts').add({
                     topic: currentTopic,
                     content: content,
                     authorType: authorType,
                     authorId: userId,
-                    imageUrl: imageUrl,
                     verification: verificationStatus,
                     timestamp: firebase.firestore.Timestamp.now(),
                     comments: []
                 });
-
                 contentInput.value = '';
-                imageInput.value = '';
                 globalRecaptchaContainer.style.display = 'none';
                 submitBtn.textContent = 'Post';
-                submitBtn.disabled = false;
                 isRecaptchaVisible = false;
                 if (typeof grecaptcha !== 'undefined' && recaptchaWidgetId !== null) grecaptcha.reset(recaptchaWidgetId);
             } catch (error) {
                 console.error("Error adding post: ", error);
                 alert("Failed to post. Please try again.");
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Post';
             }
         });
     }
