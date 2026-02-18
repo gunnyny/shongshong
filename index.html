@@ -22,7 +22,7 @@
             </div>
         </section>
 
-        <section id="topic-management">
+        <section id="topic-management" style="display: none;">
             <h2>Manage Topics</h2>
             <input type="text" id="new-topic-input" placeholder="Enter new topic">
             <button id="add-topic-button">Add Topic</button>
@@ -31,6 +31,9 @@
         <section id="new-post-section">
             <h2>Create New Post</h2>
             <form id="new-post-form">
+                <select id="topic-select" required>
+                    <option value="" disabled selected>Select a Topic</option>
+                </select>
                 <textarea id="post-content" placeholder="What's on your mind?" required></textarea>
 
                 <div id="human-verification-section" style="display: none;">

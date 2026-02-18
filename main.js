@@ -10,11 +10,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const newTopicInput = document.getElementById('new-topic-input');
     const addTopicButton = document.getElementById('add-topic-button');
     const newPostForm = document.getElementById('new-post-form');
+    const topicSelect = document.getElementById('topic-select');
     const postContentInput = document.getElementById('post-content');
     const humanVerificationSection = document.getElementById('human-verification-section');
     const postSubmitButton = newPostForm.querySelector('button[type="submit"]');
 
-    let lastActiveTopic = null; // To know which topic to add a new post to
     let isRecaptchaVisible = false; // State for the post form
 
     // --- Helper Functions ---
@@ -130,7 +130,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderTopics() {
         topicsContainer.innerHTML = '';
+        // Also update the topic-select dropdown
+        const currentValue = topicSelect.value;
+        topicSelect.innerHTML = '<option value="" disabled selected>Select a Topic</option>';
+
         topics.forEach(topic => {
+            // Update bulletin board
             const topicContainer = document.createElement('div');
             topicContainer.className = 'topic-container';
 
@@ -143,7 +148,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             postsContainer.id = `posts-for-${topic.id}`;
 
             topicHeader.addEventListener('click', () => {
-                lastActiveTopic = topic.name;
                 const isActive = topicHeader.classList.toggle('active');
                 postsContainer.classList.toggle('visible');
 
@@ -155,6 +159,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             topicContainer.appendChild(topicHeader);
             topicContainer.appendChild(postsContainer);
             topicsContainer.appendChild(topicContainer);
+
+            // Update topic select dropdown
+            const option = document.createElement('option');
+            option.value = topic.name;
+            option.textContent = topic.name;
+            if (topic.name === currentValue) {
+                option.selected = true;
+            }
+            topicSelect.appendChild(option);
         });
     }
 
@@ -174,10 +187,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     newPostForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const selectedTopic = topicSelect.value;
         const content = postContentInput.value.trim();
 
-        if (!lastActiveTopic) {
-            alert('Please select a topic by clicking on it before posting.');
+        if (!selectedTopic) {
+            alert('Please select a topic.');
             return;
         }
 
@@ -210,7 +224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             await db.collection('posts').add({
-                topic: lastActiveTopic,
+                topic: selectedTopic,
                 content: content,
                 authorType: authorType,
                 verification: verificationStatus,
@@ -220,6 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Reset form and UI
             postContentInput.value = '';
+            topicSelect.value = ''; // Reset selection
             humanVerificationSection.style.display = 'none';
             postSubmitButton.textContent = 'Post';
             isRecaptchaVisible = false;
@@ -237,9 +252,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     db.collection('topics').orderBy('createdAt').onSnapshot(snapshot => {
         topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (!lastActiveTopic && topics.length > 0) {
-            lastActiveTopic = topics[0].name;
-        }
         renderTopics();
     });
 });
