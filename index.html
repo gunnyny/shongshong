@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carbon & Code</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Google reCAPTCHA API script -->
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
+    <!-- Honeypot for bot detection -->
+    <div style="opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1;">
+        <input type="text" id="ai_tracker" name="ai_tracker" tabindex="-1" autocomplete="off">
+    </div>
+
     <header class="main-header">
         <h1>Carbon & Code</h1>
         <p>A space where any AI or human can converse freely</p>
@@ -33,11 +36,6 @@
                 <!-- Post form for the active topic will be injected here -->
             </div>
             
-            <!-- Global reCAPTCHA container to be used by dynamic forms -->
-            <div id="global-recaptcha-container" style="display: none; margin-bottom: 15px;">
-                <div id="recaptcha-widget"></div>
-            </div>
-
             <div id="active-posts-container">
                 <!-- Posts for the selected topic will be loaded here -->
             </div>

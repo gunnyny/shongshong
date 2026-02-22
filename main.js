@@ -5,13 +5,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     let topics = [];
     let currentTopic = null;
     let postListenerUnsubscribe = null;
-    let recaptchaWidgetId = null;
+    let userIP = '';
+    const viewedPosts = new Set(); // To prevent multiple increments in one session
 
-    // --- User Identification (Simple localStorage-based ID) ---
+    // --- User Identification ---
     let userId = localStorage.getItem('shongshong_user_id');
     if (!userId) {
         userId = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
         localStorage.setItem('shongshong_user_id', userId);
+    }
+
+    async function fetchUserIP() {
+        try {
+            const response = await fetch('https://api.ipify.org?format=json');
+            const data = await response.json();
+            userIP = data.ip;
+        } catch (error) {
+            console.error("Error fetching IP:", error);
+            userIP = 'unknown'; 
+        }
     }
 
     // --- DOM Elements ---
@@ -21,41 +33,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentTopicNameDisplay = document.getElementById('current-topic-name');
     const topicPostFormContainer = document.getElementById('topic-post-form-container');
     const activePostsContainer = document.getElementById('active-posts-container');
-    const globalRecaptchaContainer = document.getElementById('global-recaptcha-container');
-
-    let isRecaptchaVisible = false;
+    const aiTrackerInput = document.getElementById('ai_tracker');
 
     // --- Helper Functions ---
+    async function incrementViewCount(postId) {
+        if (viewedPosts.has(postId)) return;
+        viewedPosts.add(postId);
+        try {
+            await db.collection('posts').doc(postId).update({
+                views: firebase.firestore.FieldValue.increment(1)
+            });
+        } catch (error) {
+            console.error("Error incrementing view count:", error);
+        }
+    }
+
     async function initializeAndMigrateTopics() {
         try {
             const topicsRef = db.collection('topics');
             const snapshot = await topicsRef.get();
             
             if (snapshot.empty) {
-                console.log("No topics found. Creating initial topics.");
                 const initialTopics = ['General', 'Business', 'Love', 'Travel', 'Future'];
                 for (const name of initialTopics) {
                     await topicsRef.add({ name, createdAt: firebase.firestore.Timestamp.now() });
                 }
             } else {
-                // Migration: Rename M&A to Business, JBOD to Love
                 const migrationMap = { 'M&A': 'Business', 'JBOD': 'Love' };
-                const existingNames = snapshot.docs.map(doc => doc.data().name);
+                const existingNames = snapshot.docs.map(doc => doc.data().name.trim());
                 
+                // Cleanup duplicates in DB if any
+                const seen = new Set();
                 for (const doc of snapshot.docs) {
-                    const data = doc.data();
-                    if (migrationMap[data.name]) {
-                        await doc.ref.update({ name: migrationMap[data.name] });
-                        console.log(`Renamed topic ${data.name} to ${migrationMap[data.name]}`);
+                    const name = doc.data().name.trim();
+                    if (seen.has(name)) {
+                        await doc.ref.delete();
+                        console.log(`Deleted duplicate topic: ${name}`);
+                    } else {
+                        seen.add(name);
                     }
                 }
 
-                // Add missing topics: Travel, Future
+                for (const doc of snapshot.docs) {
+                    if (!doc.exists) continue;
+                    const data = doc.data();
+                    if (migrationMap[data.name]) {
+                        await doc.ref.update({ name: migrationMap[data.name] });
+                    }
+                }
+
                 const requiredTopics = ['Travel', 'Future'];
                 for (const name of requiredTopics) {
                     if (!existingNames.includes(name)) {
                         await topicsRef.add({ name, createdAt: firebase.firestore.Timestamp.now() });
-                        console.log(`Added missing topic: ${name}`);
                     }
                 }
             }
@@ -72,19 +102,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         posts.forEach(post => {
+            // Increment view count when rendered
+            incrementViewCount(post.id);
+
             const postElement = document.createElement('div');
             postElement.classList.add('post');
 
             const postMeta = document.createElement('div');
             postMeta.classList.add('post-meta');
-            let verificationText = post.verification ? ` (${post.verification.replace(/_/g, ' ')})` : ' (Unverified)';
-            postMeta.innerHTML = `Posted by <span class="author-type">${post.authorType === 'human' ? 'Human' : 'AI Agent'}</span>${verificationText} on ${new Date(post.timestamp.toDate()).toLocaleString()}`;
+            
+            const views = post.views || 0;
+            const authorDisplay = post.authorType || 'Human';
+            postMeta.innerHTML = `Posted by <span class="author-type">${authorDisplay}</span> on ${new Date(post.timestamp.toDate()).toLocaleString()} | Views: ${views}`;
             postElement.appendChild(postMeta);
 
             if (post.authorId === userId) {
                 const deleteButton = document.createElement('button');
                 deleteButton.classList.add('delete-post-btn');
-                deleteButton.textContent = 'X';
+                deleteButton.textContent = 'Delete';
+                deleteButton.style.cssText = 'float: right; font-size: 0.8em; color: #ff4444; background: none; border: 1px solid #ff4444; cursor: pointer; border-radius: 4px; padding: 2px 5px;';
                 deleteButton.addEventListener('click', async () => {
                     if (confirm('Are you sure you want to delete this post?')) {
                         await db.collection('posts').doc(post.id).delete();
@@ -114,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const commentMeta = document.createElement('div');
                     commentMeta.className = 'comment-meta';
-                    commentMeta.innerHTML = `Comment by <span class="author-type">${comment.authorType === 'human' ? 'Human' : 'AI Agent'}</span> on ${new Date(comment.timestamp.toDate()).toLocaleString()}`;
+                    commentMeta.innerHTML = `Comment by <span class="author-type">${comment.authorType || 'Human'}</span> on ${new Date(comment.timestamp.toDate()).toLocaleString()}`;
                     commentElement.appendChild(commentMeta);
 
                     if (comment.authorId === userId) {
@@ -145,18 +181,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             commentForm.innerHTML = `
                 <textarea class="comment-content" placeholder="Add a comment..." required style="font-size: 0.9em;"></textarea>
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <select class="comment-author-type" style="width: auto; margin-bottom: 0; font-size: 0.8em; padding: 5px;">
-                        <option value="human">Human</option>
-                        <option value="ai-agent">AI Agent</option>
-                    </select>
                     <button type="submit" style="padding: 5px 15px; font-size: 0.8em;">Comment</button>
                 </div>
             `;
             commentForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const content = commentForm.querySelector('.comment-content').value;
-                const authorType = commentForm.querySelector('.comment-author-type').value;
                 if (!content.trim()) return;
+
+                // Honeypot check for comments too
+                const aiTrackerValue = aiTrackerInput.value;
+                let authorType = "Human";
+                if (aiTrackerValue !== "") {
+                    authorType = "Synthetic (Bot detected)";
+                }
                 
                 await db.collection('posts').doc(post.id).update({
                     comments: firebase.firestore.FieldValue.arrayUnion({
@@ -181,59 +219,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const form = document.getElementById('active-post-form');
         const contentInput = document.getElementById('post-content');
-        const submitBtn = document.getElementById('post-submit-btn');
-
-        isRecaptchaVisible = false;
-        globalRecaptchaContainer.style.display = 'none';
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const content = contentInput.value.trim();
             if (!content) return;
 
-            if (!isRecaptchaVisible) {
-                globalRecaptchaContainer.style.display = 'block';
-                submitBtn.textContent = 'Confirm Post';
-                isRecaptchaVisible = true;
-                
-                if (typeof grecaptcha !== 'undefined') {
-                    if (recaptchaWidgetId === null) {
-                        recaptchaWidgetId = grecaptcha.render('recaptcha-widget', {
-                            'sitekey': '6Ldd8m8sAAAAAEFtzQxS8BOc15o3st7OBaNz9LW1'
-                        });
-                    } else {
-                        grecaptcha.reset(recaptchaWidgetId);
-                    }
-                }
-                return;
-            }
+            // Honeypot check
+            const aiTrackerValue = aiTrackerInput.value;
+            let authorTag = "Human";
 
-            let authorType = 'ai-agent';
-            let verificationStatus = 'unverified';
-            const recaptchaResponse = (typeof grecaptcha !== 'undefined' && recaptchaWidgetId !== null) ? grecaptcha.getResponse(recaptchaWidgetId) : '';
-
-            if (recaptchaResponse) {
-                authorType = 'human';
-                verificationStatus = 'human_verified';
-            } else {
-                alert('Human verification not completed. Posting as AI Agent.');
+            if (aiTrackerValue !== "") {
+                authorTag = "Synthetic (Bot detected)"; 
             }
 
             try {
                 await db.collection('posts').add({
                     topic: currentTopic,
                     content: content,
-                    authorType: authorType,
+                    authorType: authorTag,
                     authorId: userId,
-                    verification: verificationStatus,
+                    authorIP: userIP,
                     timestamp: firebase.firestore.Timestamp.now(),
+                    views: 0,
                     comments: []
                 });
                 contentInput.value = '';
-                globalRecaptchaContainer.style.display = 'none';
-                submitBtn.textContent = 'Post';
-                isRecaptchaVisible = false;
-                if (typeof grecaptcha !== 'undefined' && recaptchaWidgetId !== null) grecaptcha.reset(recaptchaWidgetId);
             } catch (error) {
                 console.error("Error adding post: ", error);
                 alert("Failed to post. Please try again.");
@@ -266,7 +277,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderTopics() {
         topicsContainer.innerHTML = '';
+        const seenNames = new Set();
+        const uniqueTopicsList = [];
+        
         topics.forEach(topic => {
+            const name = topic.name.trim();
+            if (!seenNames.has(name)) {
+                seenNames.add(name);
+                uniqueTopicsList.push(topic);
+            }
+        });
+
+        uniqueTopicsList.forEach(topic => {
             const box = document.createElement('div');
             box.className = 'topic-box';
             box.textContent = topic.name;
@@ -275,14 +297,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             topicsContainer.appendChild(box);
         });
 
-        if (!currentTopic && topics.length > 0) {
-            selectTopic(topics[0].name);
+        if (!currentTopic && uniqueTopicsList.length > 0) {
+            selectTopic(uniqueTopicsList[0].name);
         }
     }
 
     addTopicButton.addEventListener('click', async () => {
         const name = newTopicInput.value.trim();
         if (name) {
+            const exists = topics.some(t => t.name.toLowerCase().trim() === name.toLowerCase());
+            if (exists) {
+                alert('This topic already exists.');
+                return;
+            }
             try {
                 await db.collection('topics').add({ name, createdAt: firebase.firestore.Timestamp.now() });
                 newTopicInput.value = '';
@@ -293,6 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // --- Initial Load ---
+    await fetchUserIP();
     await initializeAndMigrateTopics();
     db.collection('topics').orderBy('createdAt').onSnapshot(snapshot => {
         topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
