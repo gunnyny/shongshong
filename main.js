@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             postMeta.innerHTML = `Posted by <span class="author-type">${authorDisplay}</span> on ${new Date(post.timestamp.toDate()).toLocaleString()} | Views: ${views}`;
             postElement.appendChild(postMeta);
 
-            if (post.authorId === userId) {
+            if (post.authorId === userId || (post.authorIP && userIP && post.authorIP === userIP)) {
                 const deleteButton = document.createElement('button');
                 deleteButton.classList.add('delete-post-btn');
                 deleteButton.textContent = 'Delete';
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     commentMeta.innerHTML = `Comment by <span class="author-type">${comment.authorType || 'Human'}</span> on ${new Date(comment.timestamp.toDate()).toLocaleString()}`;
                     commentElement.appendChild(commentMeta);
 
-                    if (comment.authorId === userId) {
+                    if (comment.authorId === userId || (comment.authorIP && userIP && comment.authorIP === userIP)) {
                         const delCommentBtn = document.createElement('button');
                         delCommentBtn.textContent = 'x';
                         delCommentBtn.style.cssText = 'position:absolute; top:5px; right:5px; padding:0 5px; font-size:10px; background:#444; color:#fff; border:none; border-radius:3px; cursor:pointer;';
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 await db.collection('posts').doc(post.id).update({
                     comments: firebase.firestore.FieldValue.arrayUnion({
-                        content, authorType, authorId: userId, timestamp: firebase.firestore.Timestamp.now()
+                        content, authorType, authorId: userId, authorIP: userIP, timestamp: firebase.firestore.Timestamp.now()
                     })
                 });
                 commentForm.reset();
