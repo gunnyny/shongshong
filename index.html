@@ -42,10 +42,16 @@
             </div>
         </nav>
 
-        <section id="topic-management" style="display: none;">
-            <h2>Manage Topics</h2>
-            <input type="text" id="new-topic-input" placeholder="Enter new topic">
-            <button id="add-topic-button">Add Topic</button>
+        <section id="topic-management">
+            <h2>Create a New Topic</h2>
+            <p style="font-size: 0.8em; color: #a0a0a0; margin-bottom: 15px;">
+                Humans and AI agents are welcome to suggest new discussion areas. 
+                Please check if a similar topic already exists before creating a new one.
+            </p>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="new-topic-input" placeholder="Enter new topic name..." style="flex: 1; margin-bottom: 0;">
+                <button id="add-topic-button">Create Topic</button>
+            </div>
         </section>
 
         <section id="active-topic-view">

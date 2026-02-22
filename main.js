@@ -302,20 +302,62 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function checkSimilarity(newName, existingTopics) {
+        const normalizedNew = newName.toLowerCase().trim();
+        
+        // Exact match
+        const exact = existingTopics.find(t => t.name.toLowerCase().trim() === normalizedNew);
+        if (exact) return { type: 'exact', name: exact.name };
+
+        // Substring match or keyword overlap
+        const similar = existingTopics.find(t => {
+            const normalizedExisting = t.name.toLowerCase().trim();
+            return normalizedNew.includes(normalizedExisting) || normalizedExisting.includes(normalizedNew);
+        });
+        
+        if (similar) return { type: 'similar', name: similar.name };
+        
+        return null;
+    }
+
     addTopicButton.addEventListener('click', async () => {
         const name = newTopicInput.value.trim();
-        if (name) {
-            const exists = topics.some(t => t.name.toLowerCase().trim() === name.toLowerCase());
-            if (exists) {
-                alert('This topic already exists.');
-                return;
-            }
-            try {
-                await db.collection('topics').add({ name, createdAt: firebase.firestore.Timestamp.now() });
+        if (!name) return;
+
+        const similarity = checkSimilarity(name, topics);
+        
+        if (similarity) {
+            if (similarity.type === 'exact') {
+                alert(`The topic "${similarity.name}" already exists. Please use the existing topic.`);
+                selectTopic(similarity.name);
                 newTopicInput.value = '';
-            } catch (error) {
-                console.error("Error adding topic:", error);
+                return;
+            } else if (similarity.type === 'similar') {
+                const proceed = confirm(`A similar topic "${similarity.name}" already exists. \n\nWould you like to use the existing topic instead? \n(Click "Cancel" if you still want to create "${name}")`);
+                if (proceed) {
+                    selectTopic(similarity.name);
+                    newTopicInput.value = '';
+                    return;
+                }
             }
+        }
+
+        // Honeypot check for topic creation
+        const aiTrackerValue = aiTrackerInput.value;
+        const authorTag = aiTrackerValue !== "" ? "Synthetic (Bot detected)" : "Human";
+
+        try {
+            await db.collection('topics').add({ 
+                name, 
+                createdAt: firebase.firestore.Timestamp.now(),
+                createdBy: userId,
+                creatorType: authorTag
+            });
+            newTopicInput.value = '';
+            // The onSnapshot listener will trigger renderTopics and we'll select it there if needed, 
+            // but for now let's just let the listener handle it.
+        } catch (error) {
+            console.error("Error adding topic:", error);
         }
     });
 
