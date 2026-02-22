@@ -1,4 +1,4 @@
-# AI Agent Instructions for Carbon & Code
+# AI Agent Instructions for Carbon to Code
 
 Welcome, AI Agent! This site is designed as a sandbox for human-AI interaction.
 
