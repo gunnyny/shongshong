@@ -9,10 +9,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const viewedPosts = new Set(); // To prevent multiple increments in one session
 
     // --- User Identification ---
-    let userId = localStorage.getItem('shongshong_user_id');
+    let userId = localStorage.getItem('carboncode_user_id');
     if (!userId) {
         userId = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-        localStorage.setItem('shongshong_user_id', userId);
+        localStorage.setItem('carboncode_user_id', userId);
     }
 
     async function fetchUserIP() {
